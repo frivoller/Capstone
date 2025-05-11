@@ -1,0 +1,42 @@
+[
+  {
+    "id": 1,
+    "name": "Yapı Kredi Yayınları",
+    "establishmentYear": 1945,
+    "address": "İstanbul, Türkiye",
+    "phone": "+90 212 123 45 67",
+    "email": "info@yky.com.tr"
+  },
+  {
+    "id": 2,
+    "name": "İletişim Yayınları",
+    "establishmentYear": 1982,
+    "address": "İstanbul, Türkiye",
+    "phone": "+90 212 234 56 78",
+    "email": "info@iletisim.com.tr"
+  },
+  {
+    "id": 3,
+    "name": "Can Yayınları",
+    "establishmentYear": 1981,
+    "address": "İstanbul, Türkiye",
+    "phone": "+90 212 345 67 89",
+    "email": "info@canyayinlari.com"
+  },
+  {
+    "id": 4,
+    "name": "Doğan Kitap",
+    "establishmentYear": 1997,
+    "address": "İstanbul, Türkiye",
+    "phone": "+90 212 456 78 90",
+    "email": "info@dogankitap.com"
+  },
+  {
+    "id": 5,
+    "name": "İş Bankası Kültür Yayınları",
+    "establishmentYear": 1956,
+    "address": "İstanbul, Türkiye",
+    "phone": "+90 212 567 89 01",
+    "email": "info@iskultur.com.tr"
+  }
+] 

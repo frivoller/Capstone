@@ -1,0 +1,127 @@
+[
+  {
+    "id": 1,
+    "name": "Kırmızı Saçlı Kadın",
+    "publicationYear": 2016,
+    "stock": 15,
+    "author": {
+      "id": 1,
+      "name": "Orhan Pamuk",
+      "birthDate": "1952-06-07",
+      "country": "Türkiye"
+    },
+    "publisher": {
+      "id": 1,
+      "name": "Yapı Kredi Yayınları",
+      "establishmentYear": 1945,
+      "address": "İstanbul, Türkiye"
+    },
+    "categories": [
+      {
+        "id": 1,
+        "name": "Roman",
+        "description": "Kurguya dayalı uzun anlatı türü"
+      }
+    ]
+  },
+  {
+    "id": 2,
+    "name": "Aşk",
+    "publicationYear": 2009,
+    "stock": 20,
+    "author": {
+      "id": 2,
+      "name": "Elif Şafak",
+      "birthDate": "1971-10-25",
+      "country": "Türkiye"
+    },
+    "publisher": {
+      "id": 2,
+      "name": "İletişim Yayınları",
+      "establishmentYear": 1982,
+      "address": "İstanbul, Türkiye"
+    },
+    "categories": [
+      {
+        "id": 1,
+        "name": "Roman",
+        "description": "Kurguya dayalı uzun anlatı türü"
+      }
+    ]
+  },
+  {
+    "id": 3,
+    "name": "İnce Memed",
+    "publicationYear": 1955,
+    "stock": 18,
+    "author": {
+      "id": 3,
+      "name": "Yaşar Kemal",
+      "birthDate": "1923-10-06",
+      "country": "Türkiye"
+    },
+    "publisher": {
+      "id": 3,
+      "name": "Can Yayınları",
+      "establishmentYear": 1981,
+      "address": "İstanbul, Türkiye"
+    },
+    "categories": [
+      {
+        "id": 1,
+        "name": "Roman",
+        "description": "Kurguya dayalı uzun anlatı türü"
+      }
+    ]
+  },
+  {
+    "id": 4,
+    "name": "Kürk Mantolu Madonna",
+    "publicationYear": 1943,
+    "stock": 25,
+    "author": {
+      "id": 4,
+      "name": "Sabahattin Ali",
+      "birthDate": "1907-02-25",
+      "country": "Türkiye"
+    },
+    "publisher": {
+      "id": 1,
+      "name": "Yapı Kredi Yayınları",
+      "establishmentYear": 1945,
+      "address": "İstanbul, Türkiye"
+    },
+    "categories": [
+      {
+        "id": 1,
+        "name": "Roman",
+        "description": "Kurguya dayalı uzun anlatı türü"
+      }
+    ]
+  },
+  {
+    "id": 5,
+    "name": "Huzur",
+    "publicationYear": 1949,
+    "stock": 12,
+    "author": {
+      "id": 5,
+      "name": "Ahmet Hamdi Tanpınar",
+      "birthDate": "1901-06-23",
+      "country": "Türkiye"
+    },
+    "publisher": {
+      "id": 2,
+      "name": "İletişim Yayınları",
+      "establishmentYear": 1982,
+      "address": "İstanbul, Türkiye"
+    },
+    "categories": [
+      {
+        "id": 1,
+        "name": "Roman",
+        "description": "Kurguya dayalı uzun anlatı türü"
+      }
+    ]
+  }
+] 

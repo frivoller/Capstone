@@ -1,0 +1,27 @@
+[
+  {
+    "id": 1,
+    "name": "Roman",
+    "description": "Kurguya dayalı uzun anlatı türü"
+  },
+  {
+    "id": 2,
+    "name": "Öykü",
+    "description": "Kısa kurgu anlatıları"
+  },
+  {
+    "id": 3,
+    "name": "Şiir",
+    "description": "Şiirsel anlatım türü"
+  },
+  {
+    "id": 4,
+    "name": "Bilim",
+    "description": "Bilimsel yayınlar"
+  },
+  {
+    "id": 5,
+    "name": "Tarih",
+    "description": "Tarihsel olayları ve dönemleri inceleyen kitaplar"
+  }
+] 

@@ -1,296 +1,288 @@
 import React, { useState, useEffect } from 'react';
-import { bookService, authorService, publisherService, categoryService } from '../services/api';
-import { Book, Author, Publisher, Category } from '../types';
-import toast from 'react-hot-toast';
+import { bookService, Book } from '../services/bookService';
+import { authorService, Author } from '../services/authorService';
+import { publisherService, Publisher } from '../services/publisherService';
+import { categoryService, Category } from '../services/categoryService';
+import { toast } from 'react-hot-toast';
 
+/**
+ * Interface for book form data
+ * Contains all fields needed to create or update a book
+ */
+interface BookFormData {
+  name: string;
+  publicationYear: number;
+  stock: number;
+  authorId: number;
+  publisherId: number;
+  categoryIds: number[];
+}
+
+// Initial empty form data with default values
+const initialFormData: BookFormData = {
+  name: '',
+  publicationYear: new Date().getFullYear(),
+  stock: 0,
+  authorId: 0,
+  publisherId: 0,
+  categoryIds: []
+};
+
+/**
+ * Books component for managing books in the library
+ * Handles listing, adding, editing and deleting books
+ */
 const Books: React.FC = () => {
+  // State for books and related entities
   const [books, setBooks] = useState<Book[]>([]);
   const [authors, setAuthors] = useState<Author[]>([]);
   const [publishers, setPublishers] = useState<Publisher[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [formData, setFormData] = useState({
-    name: '',
-    publicationYear: '',
-    authorId: '',
-    publisherId: '',
-    categoryId: '',
-    stock: '',
-  });
+  
+  // Form state
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState<BookFormData>(initialFormData);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [filter, setFilter] = useState({
-    name: '',
-    authorId: '',
-    publisherId: '',
-    categoryId: '',
-    stock: '',
-  });
 
+  // Load all required data on component mount
   useEffect(() => {
     loadData();
   }, []);
 
+  /**
+   * Loads all necessary data for the books page
+   * Fetches books, authors, publishers and categories
+   */
   const loadData = async () => {
     try {
-      const [booksRes, authorsRes, publishersRes, categoriesRes] = await Promise.all([
-        bookService.getAll(),
-        authorService.getAll(),
-        publisherService.getAll(),
-        categoryService.getAll(),
+      setLoading(true);
+      const [booksData, authorsData, publishersData, categoriesData] = await Promise.all([
+        bookService.getAllBooks(),
+        authorService.getAllAuthors(),
+        publisherService.getAllPublishers(),
+        categoryService.getAllCategories()
       ]);
-      setBooks(booksRes.data);
-      setAuthors(authorsRes.data);
-      setPublishers(publishersRes.data);
-      setCategories(categoriesRes.data);
+      setBooks(booksData);
+      setAuthors(authorsData);
+      setPublishers(publishersData);
+      setCategories(categoriesData);
     } catch (error) {
-      toast.error('Veriler yüklenirken bir hata oluştu');
+      toast.error('Veriler yüklenirken bir hata oluştu.');
     } finally {
       setLoading(false);
     }
   };
 
+  /**
+   * Handles form submission for creating or updating a book
+   * @param e - Form event
+   */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      if (!formData.name || !formData.publicationYear || !formData.stock || 
-          !formData.authorId || !formData.publisherId || !formData.categoryId) {
-        toast.error('Lütfen tüm alanları doldurun');
+      const author = authors.find(a => a.id === formData.authorId);
+      const publisher = publishers.find(p => p.id === formData.publisherId);
+      const selectedCategories = categories.filter(c => formData.categoryIds.includes(c.id));
+
+      // Validate required fields
+      if (!author || !publisher || selectedCategories.length === 0) {
+        toast.error('Lütfen tüm alanları doldurun.');
         return;
       }
 
+      // Prepare book data object
       const bookData = {
-        name: formData.name.trim(),
-        publicationYear: parseInt(formData.publicationYear),
-        stock: parseInt(formData.stock),
-        author: { id: parseInt(formData.authorId) },
-        publisher: { id: parseInt(formData.publisherId) },
-        categories: [{ id: parseInt(formData.categoryId) }]
+        name: formData.name,
+        publicationYear: formData.publicationYear,
+        stock: formData.stock,
+        author,
+        publisher,
+        categories: selectedCategories
       };
 
+      // Update existing book or create new one
       if (editingId) {
-        await bookService.update(editingId, bookData);
-        toast.success('Kitap başarıyla güncellendi');
+        const updated = await bookService.updateBook(editingId, bookData);
+        if (updated) {
+          toast.success('Kitap başarıyla güncellendi.');
+          await loadData();
+          resetForm();
+        }
       } else {
-        await bookService.create(bookData);
-        toast.success('Kitap başarıyla eklendi');
+        await bookService.addBook(bookData);
+        toast.success('Kitap başarıyla eklendi.');
+        await loadData();
+        resetForm();
       }
-      
-      setFormData({
-        name: '',
-        publicationYear: '',
-        authorId: '',
-        publisherId: '',
-        categoryId: '',
-        stock: '',
-      });
-      setEditingId(null);
-      loadData();
-    } catch (error: any) {
-      console.error('Form submission error:', error);
-      toast.error(error.response?.data?.message || 'İşlem sırasında bir hata oluştu');
+    } catch (error) {
+      toast.error('İşlem sırasında bir hata oluştu.');
     }
   };
 
+  /**
+   * Sets up form for editing an existing book
+   * @param book - Book object to edit
+   */
   const handleEdit = (book: Book) => {
     setFormData({
       name: book.name,
-      publicationYear: book.publicationYear.toString(),
-      authorId: book.author.id.toString(),
-      publisherId: book.publisher.id.toString(),
-      categoryId: (book.categories && book.categories[0]) ? book.categories[0].id.toString() : '',
-      stock: book.stock.toString(),
+      publicationYear: book.publicationYear,
+      stock: book.stock,
+      authorId: book.author.id,
+      publisherId: book.publisher.id,
+      categoryIds: book.categories.map(c => c.id)
     });
     setEditingId(book.id);
+    setShowForm(true);
   };
 
+  /**
+   * Handles book deletion with confirmation
+   * @param id - ID of book to delete
+   */
   const handleDelete = async (id: number) => {
     if (window.confirm('Bu kitabı silmek istediğinizden emin misiniz?')) {
       try {
-        await bookService.delete(id);
-        toast.success('Kitap başarıyla silindi');
-        loadData();
+        const success = await bookService.deleteBook(id);
+        if (success) {
+          toast.success('Kitap başarıyla silindi.');
+          await loadData();
+        } else {
+          toast.error('Kitap silinirken bir hata oluştu.');
+        }
       } catch (error) {
-        toast.error('Silme işlemi sırasında bir hata oluştu');
+        toast.error('Kitap silinirken bir hata oluştu.');
       }
     }
   };
 
-  // Filtreleme
-  const filteredBooks = books.filter((book) => {
-    return (
-      (filter.name === '' || book.name.toLowerCase().includes(filter.name.toLowerCase())) &&
-      (filter.stock === '' || book.stock.toString() === filter.stock) &&
-      (filter.authorId === '' || book.author.id.toString() === filter.authorId) &&
-      (filter.publisherId === '' || book.publisher.id.toString() === filter.publisherId) &&
-      (filter.categoryId === '' || (book.categories && book.categories[0]?.id.toString() === filter.categoryId))
-    );
-  });
+  /**
+   * Resets form state and closes the form
+   */
+  const resetForm = () => {
+    setFormData(initialFormData);
+    setEditingId(null);
+    setShowForm(false);
+  };
 
+  // Show loading indicator while data is being fetched
   if (loading) {
-    return <div className="text-center">Yükleniyor...</div>;
+    return <div className="flex justify-center items-center h-full">Yükleniyor...</div>;
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Kitaplar</h1>
+    <div className="container mx-auto p-4">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Kitaplar</h1>
         <button
-          onClick={() => {
-            setFormData({
-              name: '',
-              publicationYear: '',
-              authorId: '',
-              publisherId: '',
-              categoryId: '',
-              stock: '',
-            });
-            setEditingId(null);
-          }}
-          className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors duration-200 flex items-center gap-2"
+          onClick={() => setShowForm(!showForm)}
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-          </svg>
-          Yeni Kitap Ekle
+          {showForm ? 'İptal' : 'Yeni Kitap'}
         </button>
       </div>
 
-      {/* Filtre Alanları */}
-      <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <input
-            type="text"
-            placeholder="Kitap Adı"
-            value={filter.name}
-            onChange={e => setFilter({ ...filter, name: e.target.value })}
-            className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <input
-            type="number"
-            placeholder="Stok"
-            value={filter.stock}
-            onChange={e => setFilter({ ...filter, stock: e.target.value })}
-            className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <select
-            value={filter.authorId}
-            onChange={e => setFilter({ ...filter, authorId: e.target.value })}
-            className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="">Yazar Seçin</option>
-            {authors.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-          </select>
-          <select
-            value={filter.publisherId}
-            onChange={e => setFilter({ ...filter, publisherId: e.target.value })}
-            className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="">Yayınevi Seçin</option>
-            {publishers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-          <select
-            value={filter.categoryId}
-            onChange={e => setFilter({ ...filter, categoryId: e.target.value })}
-            className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="">Kategori Seçin</option>
-            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
-        </div>
-      </div>
-
-      {/* Ekleme/Düzenleme Formu */}
-      {(editingId || formData.name) && (
-        <div className="bg-white p-6 rounded-lg shadow-sm mb-8">
-          <h2 className="text-xl font-semibold mb-4">{editingId ? 'Kitap Düzenle' : 'Yeni Kitap Ekle'}</h2>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <input
-              type="text"
-              id="bookName"
-              name="bookName"
-              placeholder="Kitap Adı"
-              value={formData.name}
-              onChange={e => setFormData({ ...formData, name: e.target.value })}
-              className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              required
-            />
-            <input
-              type="number"
-              id="publicationYear"
-              name="publicationYear"
-              placeholder="Yayın Yılı"
-              value={formData.publicationYear}
-              onChange={e => setFormData({ ...formData, publicationYear: e.target.value })}
-              className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              required
-              min="1000"
-              max={new Date().getFullYear()}
-            />
-            <input
-              type="number"
-              id="stock"
-              name="stock"
-              placeholder="Stok"
-              value={formData.stock}
-              onChange={e => setFormData({ ...formData, stock: e.target.value })}
-              className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              required
-              min="0"
-            />
-            <select
-              id="authorId"
-              name="authorId"
-              value={formData.authorId}
-              onChange={e => setFormData({ ...formData, authorId: e.target.value })}
-              className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              required
-            >
-              <option value="">Yazar Seçin</option>
-              {authors.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
-            </select>
-            <select
-              id="publisherId"
-              name="publisherId"
-              value={formData.publisherId}
-              onChange={e => setFormData({ ...formData, publisherId: e.target.value })}
-              className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              required
-            >
-              <option value="">Yayınevi Seçin</option>
-              {publishers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
-            <select
-              id="categoryId"
-              name="categoryId"
-              value={formData.categoryId}
-              onChange={e => setFormData({ ...formData, categoryId: e.target.value })}
-              className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              required
-            >
-              <option value="">Kategori Seçin</option>
-              {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-            <div className="col-span-full flex justify-end gap-2">
+      {showForm && (
+        <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+          <h2 className="text-xl font-semibold mb-4">
+            {editingId ? 'Kitabı Düzenle' : 'Yeni Kitap'}
+          </h2>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Kitap Adı</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Yayın Yılı</label>
+                <input
+                  type="number"
+                  value={formData.publicationYear}
+                  onChange={(e) => setFormData({ ...formData, publicationYear: parseInt(e.target.value) })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Stok</label>
+                <input
+                  type="number"
+                  value={formData.stock}
+                  onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value) })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Yazar</label>
+                <select
+                  value={formData.authorId}
+                  onChange={(e) => setFormData({ ...formData, authorId: parseInt(e.target.value) })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  required
+                >
+                  <option value="">Yazar Seçin</option>
+                  {authors.map((author) => (
+                    <option key={author.id} value={author.id}>
+                      {author.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Yayınevi</label>
+                <select
+                  value={formData.publisherId}
+                  onChange={(e) => setFormData({ ...formData, publisherId: parseInt(e.target.value) })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  required
+                >
+                  <option value="">Yayınevi Seçin</option>
+                  {publishers.map((publisher) => (
+                    <option key={publisher.id} value={publisher.id}>
+                      {publisher.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Kategoriler</label>
+                <select
+                  multiple
+                  value={formData.categoryIds.map(id => id.toString())}
+                  onChange={(e) => setFormData({
+                    ...formData,
+                    categoryIds: Array.from(e.target.selectedOptions, option => parseInt(option.value))
+                  })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  required
+                >
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end space-x-3">
               <button
                 type="button"
-                onClick={() => {
-                  setFormData({
-                    name: '',
-                    publicationYear: '',
-                    authorId: '',
-                    publisherId: '',
-                    categoryId: '',
-                    stock: '',
-                  });
-                  setEditingId(null);
-                }}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+                onClick={resetForm}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
               >
                 İptal
               </button>
               <button
                 type="submit"
-                className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors duration-200"
+                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
               >
                 {editingId ? 'Güncelle' : 'Ekle'}
               </button>
@@ -299,53 +291,52 @@ const Books: React.FC = () => {
         </div>
       )}
 
-      {/* Tablo */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kitap Adı</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stok</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Yazar</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Yayınevi</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kategori</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
+      <div className="overflow-x-auto">
+        <table className="min-w-full bg-white border border-gray-300">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="px-4 py-2 border">ID</th>
+              <th className="px-4 py-2 border">Kitap Adı</th>
+              <th className="px-4 py-2 border">Yazar</th>
+              <th className="px-4 py-2 border">Yayınevi</th>
+              <th className="px-4 py-2 border">Yayın Yılı</th>
+              <th className="px-4 py-2 border">Stok</th>
+              <th className="px-4 py-2 border">Kategoriler</th>
+              <th className="px-4 py-2 border">İşlemler</th>
+            </tr>
+          </thead>
+          <tbody>
+            {books.map((book) => (
+              <tr key={book.id} className="hover:bg-gray-50">
+                <td className="px-4 py-2 border">{book.id}</td>
+                <td className="px-4 py-2 border">{book.name}</td>
+                <td className="px-4 py-2 border">{book.author.name}</td>
+                <td className="px-4 py-2 border">{book.publisher.name}</td>
+                <td className="px-4 py-2 border">{book.publicationYear}</td>
+                <td className="px-4 py-2 border">{book.stock}</td>
+                <td className="px-4 py-2 border">
+                  {book.categories.map(c => c.name).join(', ')}
+                </td>
+                <td className="px-4 py-2 border">
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => handleEdit(book)}
+                      className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600"
+                    >
+                      Düzenle
+                    </button>
+                    <button
+                      onClick={() => handleDelete(book.id)}
+                      className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                    >
+                      Sil
+                    </button>
+                  </div>
+                </td>
               </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredBooks.map((book) => (
-                <tr key={book.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{book.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{book.stock}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{book.author?.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{book.publisher?.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{book.categories && book.categories[0]?.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleEdit(book)}
-                        className="text-indigo-600 hover:text-indigo-900"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => handleDelete(book.id)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );

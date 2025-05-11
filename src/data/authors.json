@@ -1,0 +1,37 @@
+[
+  {
+    "id": 1,
+    "name": "Orhan Pamuk",
+    "birthDate": "1952-06-07",
+    "country": "Türkiye",
+    "biography": "Nobel ödüllü Türk yazar"
+  },
+  {
+    "id": 2,
+    "name": "Elif Şafak",
+    "birthDate": "1971-10-25",
+    "country": "Türkiye",
+    "biography": "Uluslararası çok satan yazar"
+  },
+  {
+    "id": 3,
+    "name": "Yaşar Kemal",
+    "birthDate": "1923-10-06",
+    "country": "Türkiye",
+    "biography": "Türk edebiyatının önemli isimlerinden"
+  },
+  {
+    "id": 4,
+    "name": "Sabahattin Ali",
+    "birthDate": "1907-02-25",
+    "country": "Türkiye",
+    "biography": "Kürk Mantolu Madonna'nın yazarı"
+  },
+  {
+    "id": 5,
+    "name": "Ahmet Hamdi Tanpınar",
+    "birthDate": "1901-06-23",
+    "country": "Türkiye",
+    "biography": "Huzur ve Saatleri Ayarlama Enstitüsü'nün yazarı"
+  }
+] 

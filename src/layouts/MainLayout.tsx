@@ -1,41 +1,73 @@
-import React from 'react';
-import { Link, Outlet, useLocation } from 'react-router-dom';
-import { Toaster } from 'react-hot-toast';
+import React, { ReactNode } from 'react';
+import { NavLink } from 'react-router-dom';
 
-const navItems = [
-  { to: '/books', label: 'Books' },
-  { to: '/authors', label: 'Author' },
-  { to: '/publishers', label: 'Publisher' },
-  { to: '/categories', label: 'Category' },
-  { to: '/borrows', label: 'Borrow' },
-];
+/**
+ * Props interface for the MainLayout component
+ */
+interface MainLayoutProps {
+  children: ReactNode;
+}
 
-const MainLayout: React.FC = () => {
-  const location = useLocation();
+/**
+ * Main Layout Component
+ * Provides the common layout structure for all pages
+ * Includes navigation, main content area, and footer
+ * 
+ * @param children - Content to be rendered in the main area
+ */
+const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   return (
-    <div className="min-h-screen bg-gray-100">
-      <nav className="bg-gray-900 shadow-lg sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="flex justify-between h-16 items-center">
-            <Link to="/" className="text-2xl font-bold text-white tracking-wide">Library App</Link>
-            <div className="flex space-x-6">
-              {navItems.map((item) => (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className={`text-white px-2 py-1 rounded transition-colors duration-200 ${location.pathname.startsWith(item.to) ? 'bg-gray-800 font-semibold' : 'hover:bg-gray-800'}`}
-                >
-                  {item.label}
-                </Link>
-              ))}
+    <div className="flex flex-col min-h-screen">
+      {/* Navigation bar */}
+      <nav className="bg-blue-600 text-white shadow-lg">
+        <div className="container mx-auto px-4 py-3">
+          <div className="flex justify-between items-center">
+            {/* Application title */}
+            <div className="text-xl font-bold">Kütüphane Yönetim Sistemi</div>
+            {/* Navigation links */}
+            <div className="flex space-x-4">
+              <NavLink to="/" className={({ isActive }) => 
+                isActive ? "font-bold border-b-2 border-white" : "hover:text-blue-200"
+              }>
+                Ana Sayfa
+              </NavLink>
+              <NavLink to="/books" className={({ isActive }) => 
+                isActive ? "font-bold border-b-2 border-white" : "hover:text-blue-200"
+              }>
+                Kitaplar
+              </NavLink>
+              <NavLink to="/authors" className={({ isActive }) => 
+                isActive ? "font-bold border-b-2 border-white" : "hover:text-blue-200"
+              }>
+                Yazarlar
+              </NavLink>
+              <NavLink to="/publishers" className={({ isActive }) => 
+                isActive ? "font-bold border-b-2 border-white" : "hover:text-blue-200"
+              }>
+                Yayınevleri
+              </NavLink>
+              <NavLink to="/categories" className={({ isActive }) => 
+                isActive ? "font-bold border-b-2 border-white" : "hover:text-blue-200"
+              }>
+                Kategoriler
+              </NavLink>
+              <NavLink to="/borrows" className={({ isActive }) => 
+                isActive ? "font-bold border-b-2 border-white" : "hover:text-blue-200"
+              }>
+                Ödünç Alma
+              </NavLink>
             </div>
           </div>
         </div>
       </nav>
-      <main className="max-w-5xl mx-auto py-8 px-4">
-        <Outlet />
+      {/* Main content area */}
+      <main className="container mx-auto p-4 mt-4 flex-grow">
+        {children}
       </main>
-      <Toaster position="top-right" />
+      {/* Footer */}
+      <footer className="bg-gray-200 text-center p-4 mt-8 fixed bottom-0 w-full">
+        <p>© 2025 Kütüphane Yönetim Sistemi</p>
+      </footer>
     </div>
   );
 };

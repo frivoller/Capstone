@@ -1,25 +1,31 @@
 import React, { useState, useEffect } from 'react';
-import { borrowService, bookService } from '../services/api';
-import { Borrow, Book } from '../types';
-import toast from 'react-hot-toast';
+import { borrowService, Borrow } from '../services/borrowService';
+import { bookService, Book } from '../services/bookService';
+import { toast } from 'react-hot-toast';
+
+interface BorrowFormData {
+  borrowerName: string;
+  borrowerMail: string;
+  borrowingDate: string;
+  returnDate: string;
+  bookId: number;
+}
+
+const initialFormData: BorrowFormData = {
+  borrowerName: '',
+  borrowerMail: '',
+  borrowingDate: new Date().toISOString().split('T')[0],
+  returnDate: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+  bookId: 0
+};
 
 const Borrows: React.FC = () => {
   const [borrows, setBorrows] = useState<Borrow[]>([]);
   const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
-  const [formData, setFormData] = useState({
-    bookId: '',
-    userId: '',
-    borrowDate: new Date().toISOString().split('T')[0],
-    returnDate: '',
-  });
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState<BorrowFormData>(initialFormData);
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [filter, setFilter] = useState({
-    bookId: '',
-    userId: '',
-    borrowDate: '',
-    returnDate: '',
-  });
 
   useEffect(() => {
     loadData();
@@ -27,14 +33,15 @@ const Borrows: React.FC = () => {
 
   const loadData = async () => {
     try {
-      const [borrowsRes, booksRes] = await Promise.all([
-        borrowService.getAll(),
-        bookService.getAll(),
+      setLoading(true);
+      const [borrowsData, booksData] = await Promise.all([
+        borrowService.getAllBorrows(),
+        bookService.getAllBooks()
       ]);
-      setBorrows(borrowsRes.data);
-      setBooks(booksRes.data);
+      setBorrows(borrowsData);
+      setBooks(booksData);
     } catch (error) {
-      toast.error('Veriler yüklenirken bir hata oluştu');
+      toast.error('Veriler yüklenirken bir hata oluştu.');
     } finally {
       setLoading(false);
     }
@@ -42,283 +49,254 @@ const Borrows: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Seçilen kitabı bul
+    const selectedBook = books.find(book => book.id === formData.bookId);
+    if (!selectedBook) {
+      toast.error('Lütfen geçerli bir kitap seçin.');
+      return;
+    }
+
     try {
-      if (!formData.bookId || !formData.userId || !formData.borrowDate) {
-        toast.error('Lütfen gerekli alanları doldurun');
-        return;
-      }
-
-      const borrowData = {
-        bookId: parseInt(formData.bookId),
-        userId: parseInt(formData.userId),
-        borrowingDate: formData.borrowDate,
-        returnDate: formData.returnDate || null
-      };
-
       if (editingId) {
-        await borrowService.update(editingId, borrowData);
-        toast.success('Ödünç kaydı başarıyla güncellendi');
+        const borrowToUpdate = {
+          borrowerName: formData.borrowerName,
+          borrowerMail: formData.borrowerMail,
+          borrowingDate: formData.borrowingDate,
+          returnDate: formData.returnDate,
+          book: selectedBook
+        };
+        
+        const updated = await borrowService.updateBorrow(editingId, borrowToUpdate);
+        if (updated) {
+          toast.success('Ödünç alma kaydı başarıyla güncellendi.');
+          await loadData();
+          resetForm();
+        }
       } else {
-        await borrowService.create(borrowData);
-        toast.success('Ödünç kaydı başarıyla eklendi');
+        if (selectedBook.stock <= 0) {
+          toast.error('Bu kitap stokta yok.');
+          return;
+        }
+        
+        const newBorrow = {
+          borrowerName: formData.borrowerName,
+          borrowerMail: formData.borrowerMail,
+          borrowingDate: formData.borrowingDate,
+          returnDate: formData.returnDate,
+          book: selectedBook
+        };
+        
+        await borrowService.addBorrow(newBorrow);
+        
+        // Kitap stoğunu güncelle
+        await bookService.updateBook(selectedBook.id, {
+          ...selectedBook,
+          stock: selectedBook.stock - 1
+        });
+        
+        toast.success('Kitap başarıyla ödünç alındı.');
+        await loadData();
+        resetForm();
       }
-      setFormData({
-        bookId: '',
-        userId: '',
-        borrowDate: new Date().toISOString().split('T')[0],
-        returnDate: '',
-      });
-      setEditingId(null);
-      loadData();
-    } catch (error: any) {
-      console.error('Form submission error:', error);
-      toast.error(error.response?.data?.message || 'İşlem sırasında bir hata oluştu');
+    } catch (error) {
+      toast.error('İşlem sırasında bir hata oluştu.');
     }
   };
 
   const handleEdit = (borrow: Borrow) => {
     setFormData({
-      bookId: borrow.book.id.toString(),
-      userId: borrow.user.id.toString(),
-      borrowDate: borrow.borrowingDate.split('T')[0],
-      returnDate: borrow.returnDate ? borrow.returnDate.split('T')[0] : '',
+      borrowerName: borrow.borrowerName,
+      borrowerMail: borrow.borrowerMail,
+      borrowingDate: borrow.borrowingDate,
+      returnDate: borrow.returnDate,
+      bookId: borrow.book.id
     });
     setEditingId(borrow.id);
+    setShowForm(true);
   };
 
   const handleDelete = async (id: number) => {
-    if (window.confirm('Bu ödünç kaydını silmek istediğinizden emin misiniz?')) {
+    if (window.confirm('Bu ödünç alma kaydını silmek istediğinizden emin misiniz?')) {
       try {
-        await borrowService.delete(id);
-        toast.success('Ödünç kaydı başarıyla silindi');
-        loadData();
+        // Ödünç kaydını bul
+        const borrowToDelete = borrows.find(b => b.id === id);
+        if (!borrowToDelete) return;
+        
+        const success = await borrowService.deleteBorrow(id);
+        if (success) {
+          // Kitap stoğunu güncelle
+          const book = books.find(b => b.id === borrowToDelete.book.id);
+          if (book) {
+            await bookService.updateBook(book.id, {
+              ...book,
+              stock: book.stock + 1
+            });
+          }
+          
+          toast.success('Ödünç alma kaydı başarıyla silindi.');
+          await loadData();
+        } else {
+          toast.error('Ödünç alma kaydı silinirken bir hata oluştu.');
+        }
       } catch (error) {
-        toast.error('Silme işlemi sırasında bir hata oluştu');
+        toast.error('Ödünç alma kaydı silinirken bir hata oluştu.');
       }
     }
   };
 
-  const handleReturn = async (id: number) => {
-    try {
-      await borrowService.update(id, { returnDate: new Date().toISOString() });
-      toast.success('Kitap başarıyla iade edildi');
-      loadData();
-    } catch (error) {
-      toast.error('İade işlemi sırasında bir hata oluştu');
-    }
+  const resetForm = () => {
+    setFormData(initialFormData);
+    setEditingId(null);
+    setShowForm(false);
   };
 
-  const filteredBorrows = borrows.filter((borrow) => {
-    return (
-      (filter.bookId === '' || borrow.book.id.toString() === filter.bookId) &&
-      (filter.userId === '' || borrow.user.id.toString() === filter.userId) &&
-      (filter.borrowDate === '' || borrow.borrowingDate.startsWith(filter.borrowDate)) &&
-      (filter.returnDate === '' || (borrow.returnDate && borrow.returnDate.startsWith(filter.returnDate)))
-    );
-  });
-
   if (loading) {
-    return <div className="text-center">Yükleniyor...</div>;
+    return <div className="flex justify-center items-center h-full">Yükleniyor...</div>;
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Ödünç Kayıtları</h1>
+    <div className="container mx-auto p-4">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Ödünç Alma İşlemleri</h1>
         <button
-          onClick={() => {
-            setFormData({
-              bookId: '',
-              userId: '',
-              borrowDate: new Date().toISOString().split('T')[0],
-              returnDate: '',
-            });
-            setEditingId(null);
-          }}
-          className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors duration-200 flex items-center gap-2"
+          onClick={() => setShowForm(!showForm)}
+          className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-          </svg>
-          Yeni Ödünç Kaydı
+          {showForm ? 'İptal' : 'Yeni Ödünç'}
         </button>
       </div>
 
-      {/* Filtre Alanları */}
-      <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <select
-            value={filter.bookId}
-            onChange={e => setFilter({ ...filter, bookId: e.target.value })}
-            className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          >
-            <option value="">Kitap Seçin</option>
-            {books.map(book => (
-              <option key={book.id} value={book.id}>{book.name}</option>
-            ))}
-          </select>
-          <input
-            type="text"
-            placeholder="Kullanıcı ID"
-            value={filter.userId}
-            onChange={e => setFilter({ ...filter, userId: e.target.value })}
-            className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <input
-            type="date"
-            value={filter.borrowDate}
-            onChange={e => setFilter({ ...filter, borrowDate: e.target.value })}
-            className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <input
-            type="date"
-            value={filter.returnDate}
-            onChange={e => setFilter({ ...filter, returnDate: e.target.value })}
-            className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-        </div>
-      </div>
-
-      {/* Ekleme/Düzenleme Formu */}
-      {(editingId || formData.bookId) && (
-        <div className="bg-white p-6 rounded-lg shadow-sm mb-8">
-          <h2 className="text-xl font-semibold mb-4">{editingId ? 'Ödünç Kaydı Düzenle' : 'Yeni Ödünç Kaydı'}</h2>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <select
-              id="bookId"
-              name="bookId"
-              value={formData.bookId}
-              onChange={e => setFormData({ ...formData, bookId: e.target.value })}
-              className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              required
-            >
-              <option value="">Kitap Seçin</option>
-              {books.map(book => (
-                <option key={book.id} value={book.id}>{book.name}</option>
-              ))}
-            </select>
-            <input
-              type="number"
-              id="userId"
-              name="userId"
-              placeholder="Kullanıcı ID"
-              value={formData.userId}
-              onChange={e => setFormData({ ...formData, userId: e.target.value })}
-              className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              required
-              min="1"
-            />
-            <input
-              type="date"
-              id="borrowDate"
-              name="borrowDate"
-              value={formData.borrowDate}
-              onChange={e => setFormData({ ...formData, borrowDate: e.target.value })}
-              className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              required
-              max={new Date().toISOString().split('T')[0]}
-            />
-            <input
-              type="date"
-              id="returnDate"
-              name="returnDate"
-              value={formData.returnDate}
-              onChange={e => setFormData({ ...formData, returnDate: e.target.value })}
-              className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              min={formData.borrowDate}
-            />
-            <div className="col-span-full flex justify-end gap-2">
+      {showForm && (
+        <div className="bg-white p-6 rounded-lg shadow-md mb-6">
+          <h2 className="text-xl font-semibold mb-4">
+            {editingId ? 'Ödünç Kaydını Düzenle' : 'Yeni Ödünç Alma'}
+          </h2>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Ödünç Alan Adı</label>
+                <input
+                  type="text"
+                  value={formData.borrowerName}
+                  onChange={(e) => setFormData({ ...formData, borrowerName: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">E-posta</label>
+                <input
+                  type="email"
+                  value={formData.borrowerMail}
+                  onChange={(e) => setFormData({ ...formData, borrowerMail: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Ödünç Alma Tarihi</label>
+                <input
+                  type="date"
+                  value={formData.borrowingDate}
+                  onChange={(e) => setFormData({ ...formData, borrowingDate: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">İade Tarihi</label>
+                <input
+                  type="date"
+                  value={formData.returnDate}
+                  onChange={(e) => setFormData({ ...formData, returnDate: e.target.value })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  required
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700">Kitap</label>
+                <select
+                  value={formData.bookId}
+                  onChange={(e) => setFormData({ ...formData, bookId: parseInt(e.target.value) })}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  required
+                >
+                  <option value="">Kitap Seçin</option>
+                  {books.map((book) => (
+                    <option key={book.id} value={book.id} disabled={book.stock <= 0 && !editingId}>
+                      {book.name} - {book.author.name} ({book.stock} adet stokta)
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="flex justify-end space-x-3">
               <button
                 type="button"
-                onClick={() => {
-                  setFormData({
-                    bookId: '',
-                    userId: '',
-                    borrowDate: new Date().toISOString().split('T')[0],
-                    returnDate: '',
-                  });
-                  setEditingId(null);
-                }}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors duration-200"
+                onClick={resetForm}
+                className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
               >
                 İptal
               </button>
               <button
                 type="submit"
-                className="bg-indigo-600 text-white px-6 py-2 rounded-lg hover:bg-indigo-700 transition-colors duration-200"
+                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
               >
-                {editingId ? 'Güncelle' : 'Ekle'}
+                {editingId ? 'Güncelle' : 'Ödünç Al'}
               </button>
             </div>
           </form>
         </div>
       )}
 
-      {/* Tablo */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kitap</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Kullanıcı</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ödünç Tarihi</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İade Tarihi</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">İşlemler</th>
+      <div className="overflow-x-auto">
+        <table className="min-w-full bg-white border border-gray-300">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="px-4 py-2 border">ID</th>
+              <th className="px-4 py-2 border">Ödünç Alan</th>
+              <th className="px-4 py-2 border">E-posta</th>
+              <th className="px-4 py-2 border">Kitap</th>
+              <th className="px-4 py-2 border">Yazar</th>
+              <th className="px-4 py-2 border">Ödünç Alma Tarihi</th>
+              <th className="px-4 py-2 border">İade Tarihi</th>
+              <th className="px-4 py-2 border">İşlemler</th>
+            </tr>
+          </thead>
+          <tbody>
+            {borrows.map((borrow) => (
+              <tr key={borrow.id} className="hover:bg-gray-50">
+                <td className="px-4 py-2 border">{borrow.id}</td>
+                <td className="px-4 py-2 border">{borrow.borrowerName}</td>
+                <td className="px-4 py-2 border">{borrow.borrowerMail}</td>
+                <td className="px-4 py-2 border">{borrow.book.name}</td>
+                <td className="px-4 py-2 border">{borrow.book.author.name}</td>
+                <td className="px-4 py-2 border">{borrow.borrowingDate}</td>
+                <td className="px-4 py-2 border">{borrow.returnDate}</td>
+                <td className="px-4 py-2 border">
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={() => handleEdit(borrow)}
+                      className="bg-yellow-500 text-white px-3 py-1 rounded hover:bg-yellow-600"
+                    >
+                      Düzenle
+                    </button>
+                    <button
+                      onClick={() => handleDelete(borrow.id)}
+                      className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600"
+                    >
+                      Sil
+                    </button>
+                  </div>
+                </td>
               </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredBorrows.map((borrow) => (
-                <tr key={borrow.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{borrow.book?.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{borrow.user?.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {new Date(borrow.borrowingDate).toLocaleDateString('tr-TR')}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {borrow.returnDate ? new Date(borrow.returnDate).toLocaleDateString('tr-TR') : '-'}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    <div className="flex gap-2">
-                      {!borrow.returnDate && (
-                        <button
-                          onClick={() => handleReturn(borrow.id)}
-                          className="text-green-600 hover:text-green-900"
-                          title="İade Et"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleEdit(borrow)}
-                        className="text-indigo-600 hover:text-indigo-900"
-                        title="Düzenle"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => handleDelete(borrow.id)}
-                        className="text-red-600 hover:text-red-900"
-                        title="Sil"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
-                        </svg>
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
 };
 
-export default Borrows; 
+export default Borrows;

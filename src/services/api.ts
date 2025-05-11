@@ -1,44 +1,26 @@
-import axios from 'axios';
-import { Book, Author, Publisher, Category, Borrow } from '../types';
+import axios, { AxiosError } from 'axios';
 
-const API_BASE = 'https://advisory-slug-frivoller-95937079.koyeb.app/api/v1';
+/**
+ * Axios API client instance
+ * Configured with base URL and timeout settings
+ * Used for all HTTP requests to the backend API
+ */
+const api = axios.create({
+  baseURL: 'https://advisory-slug-frivoller-95937079.koyeb.app/api/v1',
+  timeout: 10000,
+});
 
-export const bookService = {
-  getAll: () => axios.get<Book[]>(`${API_BASE}/books`),
-  getById: (id: number) => axios.get<Book>(`${API_BASE}/books/${id}`),
-  create: (data: any) => axios.post(`${API_BASE}/books`, data),
-  update: (id: number, data: any) => axios.put(`${API_BASE}/books/${id}`, data),
-  delete: (id: number) => axios.delete(`${API_BASE}/books/${id}`),
-};
+/**
+ * Response interceptor
+ * Handles API response errors globally
+ * Previously contained toast notifications (removed)
+ */
+api.interceptors.response.use(
+  response => response,
+  (error: AxiosError) => {
+    // Error handling without toast notifications
+    return Promise.reject(error);
+  }
+);
 
-export const authorService = {
-  getAll: () => axios.get<Author[]>(`${API_BASE}/authors`),
-  getById: (id: number) => axios.get<Author>(`${API_BASE}/authors/${id}`),
-  create: (data: Partial<Author>) => axios.post(`${API_BASE}/authors`, data),
-  update: (id: number, data: Partial<Author>) => axios.put(`${API_BASE}/authors/${id}`, data),
-  delete: (id: number) => axios.delete(`${API_BASE}/authors/${id}`),
-};
-
-export const publisherService = {
-  getAll: () => axios.get<Publisher[]>(`${API_BASE}/publishers`),
-  getById: (id: number) => axios.get<Publisher>(`${API_BASE}/publishers/${id}`),
-  create: (data: Partial<Publisher>) => axios.post(`${API_BASE}/publishers`, data),
-  update: (id: number, data: Partial<Publisher>) => axios.put(`${API_BASE}/publishers/${id}`, data),
-  delete: (id: number) => axios.delete(`${API_BASE}/publishers/${id}`),
-};
-
-export const categoryService = {
-  getAll: () => axios.get<Category[]>(`${API_BASE}/categories`),
-  getById: (id: number) => axios.get<Category>(`${API_BASE}/categories/${id}`),
-  create: (data: Partial<Category>) => axios.post(`${API_BASE}/categories`, data),
-  update: (id: number, data: Partial<Category>) => axios.put(`${API_BASE}/categories/${id}`, data),
-  delete: (id: number) => axios.delete(`${API_BASE}/categories/${id}`),
-};
-
-export const borrowService = {
-  getAll: () => axios.get<Borrow[]>(`${API_BASE}/borrows`),
-  getById: (id: number) => axios.get<Borrow>(`${API_BASE}/borrows/${id}`),
-  create: (data: Partial<Borrow>) => axios.post(`${API_BASE}/borrows`, data),
-  update: (id: number, data: Partial<Borrow>) => axios.put(`${API_BASE}/borrows/${id}`, data),
-  delete: (id: number) => axios.delete(`${API_BASE}/borrows/${id}`),
-}; 
+export default api; 
