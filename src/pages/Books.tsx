@@ -10,7 +10,7 @@ const Books: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
-    title: '',
+    name: '',
     authorId: '',
     publisherId: '',
     categoryId: '',
@@ -18,11 +18,11 @@ const Books: React.FC = () => {
   });
   const [editingId, setEditingId] = useState<number | null>(null);
   const [filter, setFilter] = useState({
-    title: '',
-    stock: '',
+    name: '',
     authorId: '',
     publisherId: '',
     categoryId: '',
+    stock: '',
   });
 
   useEffect(() => {
@@ -67,7 +67,7 @@ const Books: React.FC = () => {
         toast.success('Kitap başarıyla eklendi');
       }
       setFormData({
-        title: '',
+        name: '',
         authorId: '',
         publisherId: '',
         categoryId: '',
@@ -82,10 +82,10 @@ const Books: React.FC = () => {
 
   const handleEdit = (book: Book) => {
     setFormData({
-      title: book.title,
-      authorId: book.authorId.toString(),
-      publisherId: book.publisherId.toString(),
-      categoryId: book.categoryId.toString(),
+      name: book.name,
+      authorId: book.author.id.toString(),
+      publisherId: book.publisher.id.toString(),
+      categoryId: (book.categories && book.categories[0]) ? book.categories[0].id.toString() : '',
       stock: book.stock.toString(),
     });
     setEditingId(book.id);
@@ -106,11 +106,11 @@ const Books: React.FC = () => {
   // Filtreleme
   const filteredBooks = books.filter((book) => {
     return (
-      (filter.title === '' || book.title.toLowerCase().includes(filter.title.toLowerCase())) &&
+      (filter.name === '' || book.name.toLowerCase().includes(filter.name.toLowerCase())) &&
       (filter.stock === '' || book.stock.toString() === filter.stock) &&
-      (filter.authorId === '' || book.authorId.toString() === filter.authorId) &&
-      (filter.publisherId === '' || book.publisherId.toString() === filter.publisherId) &&
-      (filter.categoryId === '' || book.categoryId.toString() === filter.categoryId)
+      (filter.authorId === '' || book.author.id.toString() === filter.authorId) &&
+      (filter.publisherId === '' || book.publisher.id.toString() === filter.publisherId) &&
+      (filter.categoryId === '' || (book.categories && book.categories[0]?.id.toString() === filter.categoryId))
     );
   });
 
@@ -125,7 +125,7 @@ const Books: React.FC = () => {
         <button
           onClick={() => {
             setFormData({
-              title: '',
+              name: '',
               authorId: '',
               publisherId: '',
               categoryId: '',
@@ -148,8 +148,8 @@ const Books: React.FC = () => {
           <input
             type="text"
             placeholder="Kitap Adı"
-            value={filter.title}
-            onChange={e => setFilter({ ...filter, title: e.target.value })}
+            value={filter.name}
+            onChange={e => setFilter({ ...filter, name: e.target.value })}
             className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
           <input
@@ -187,15 +187,15 @@ const Books: React.FC = () => {
       </div>
 
       {/* Ekleme/Düzenleme Formu */}
-      {(editingId || formData.title) && (
+      {(editingId || formData.name) && (
         <div className="bg-white p-6 rounded-lg shadow-sm mb-8">
           <h2 className="text-xl font-semibold mb-4">{editingId ? 'Kitap Düzenle' : 'Yeni Kitap Ekle'}</h2>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <input
               type="text"
               placeholder="Kitap Adı"
-              value={formData.title}
-              onChange={e => setFormData({ ...formData, title: e.target.value })}
+              value={formData.name}
+              onChange={e => setFormData({ ...formData, name: e.target.value })}
               className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
               required
             />
@@ -240,7 +240,7 @@ const Books: React.FC = () => {
                 type="button"
                 onClick={() => {
                   setFormData({
-                    title: '',
+                    name: '',
                     authorId: '',
                     publisherId: '',
                     categoryId: '',
@@ -280,11 +280,11 @@ const Books: React.FC = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredBooks.map((book) => (
                 <tr key={book.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{book.title}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{book.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{book.stock}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{book.author?.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{book.publisher?.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{book.category?.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{book.categories && book.categories[0]?.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     <div className="flex gap-2">
                       <button
