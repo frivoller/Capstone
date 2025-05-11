@@ -44,9 +44,10 @@ const Borrows: React.FC = () => {
     e.preventDefault();
     try {
       const borrowData = {
-        ...formData,
         bookId: parseInt(formData.bookId),
         userId: parseInt(formData.userId),
+        borrowingDate: formData.borrowDate,
+        returnDate: formData.returnDate || null
       };
 
       if (editingId) {
@@ -71,9 +72,9 @@ const Borrows: React.FC = () => {
 
   const handleEdit = (borrow: Borrow) => {
     setFormData({
-      bookId: borrow.bookId.toString(),
-      userId: borrow.userId.toString(),
-      borrowDate: borrow.borrowDate.split('T')[0],
+      bookId: borrow.book.id.toString(),
+      userId: borrow.user.id.toString(),
+      borrowDate: borrow.borrowingDate.split('T')[0],
       returnDate: borrow.returnDate ? borrow.returnDate.split('T')[0] : '',
     });
     setEditingId(borrow.id);
@@ -103,9 +104,9 @@ const Borrows: React.FC = () => {
 
   const filteredBorrows = borrows.filter((borrow) => {
     return (
-      (filter.bookId === '' || borrow.bookId.toString() === filter.bookId) &&
-      (filter.userId === '' || borrow.userId.toString() === filter.userId) &&
-      (filter.borrowDate === '' || borrow.borrowDate.startsWith(filter.borrowDate)) &&
+      (filter.bookId === '' || borrow.book.id.toString() === filter.bookId) &&
+      (filter.userId === '' || borrow.user.id.toString() === filter.userId) &&
+      (filter.borrowDate === '' || borrow.borrowingDate.startsWith(filter.borrowDate)) &&
       (filter.returnDate === '' || (borrow.returnDate && borrow.returnDate.startsWith(filter.returnDate)))
     );
   });
@@ -147,7 +148,7 @@ const Borrows: React.FC = () => {
           >
             <option value="">Kitap Seçin</option>
             {books.map(book => (
-              <option key={book.id} value={book.id}>{book.title}</option>
+              <option key={book.id} value={book.id}>{book.name}</option>
             ))}
           </select>
           <input
@@ -185,7 +186,7 @@ const Borrows: React.FC = () => {
             >
               <option value="">Kitap Seçin</option>
               {books.map(book => (
-                <option key={book.id} value={book.id}>{book.title}</option>
+                <option key={book.id} value={book.id}>{book.name}</option>
               ))}
             </select>
             <input
@@ -252,10 +253,10 @@ const Borrows: React.FC = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredBorrows.map((borrow) => (
                 <tr key={borrow.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{borrow.book?.title}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{borrow.book?.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{borrow.user?.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {new Date(borrow.borrowDate).toLocaleDateString('tr-TR')}
+                    {new Date(borrow.borrowingDate).toLocaleDateString('tr-TR')}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {borrow.returnDate ? new Date(borrow.returnDate).toLocaleDateString('tr-TR') : '-'}
