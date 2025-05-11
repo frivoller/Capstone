@@ -6,8 +6,8 @@ const API_BASE = 'https://advisory-slug-frivoller-95937079.koyeb.app/api/v1';
 export const bookService = {
   getAll: () => axios.get<Book[]>(`${API_BASE}/books`),
   getById: (id: number) => axios.get<Book>(`${API_BASE}/books/${id}`),
-  create: (data: Partial<Book>) => axios.post(`${API_BASE}/books`, data),
-  update: (id: number, data: Partial<Book>) => axios.put(`${API_BASE}/books/${id}`, data),
+  create: (data: any) => axios.post(`${API_BASE}/books`, data),
+  update: (id: number, data: any) => axios.put(`${API_BASE}/books/${id}`, data),
   delete: (id: number) => axios.delete(`${API_BASE}/books/${id}`),
 };
 

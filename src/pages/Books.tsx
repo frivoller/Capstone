@@ -11,6 +11,7 @@ const Books: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     name: '',
+    publicationYear: '',
     authorId: '',
     publisherId: '',
     categoryId: '',
@@ -52,11 +53,12 @@ const Books: React.FC = () => {
     e.preventDefault();
     try {
       const bookData = {
-        ...formData,
-        authorId: parseInt(formData.authorId),
-        publisherId: parseInt(formData.publisherId),
-        categoryId: parseInt(formData.categoryId),
+        name: formData.name,
+        publicationYear: parseInt(formData.publicationYear),
         stock: parseInt(formData.stock),
+        author: { id: parseInt(formData.authorId) },
+        publisher: { id: parseInt(formData.publisherId) },
+        categories: [{ id: parseInt(formData.categoryId) }]
       };
 
       if (editingId) {
@@ -68,6 +70,7 @@ const Books: React.FC = () => {
       }
       setFormData({
         name: '',
+        publicationYear: '',
         authorId: '',
         publisherId: '',
         categoryId: '',
@@ -83,6 +86,7 @@ const Books: React.FC = () => {
   const handleEdit = (book: Book) => {
     setFormData({
       name: book.name,
+      publicationYear: book.publicationYear.toString(),
       authorId: book.author.id.toString(),
       publisherId: book.publisher.id.toString(),
       categoryId: (book.categories && book.categories[0]) ? book.categories[0].id.toString() : '',
@@ -126,6 +130,7 @@ const Books: React.FC = () => {
           onClick={() => {
             setFormData({
               name: '',
+              publicationYear: '',
               authorId: '',
               publisherId: '',
               categoryId: '',
@@ -201,6 +206,15 @@ const Books: React.FC = () => {
             />
             <input
               type="number"
+              placeholder="Yayın Yılı"
+              value={formData.publicationYear}
+              onChange={e => setFormData({ ...formData, publicationYear: e.target.value })}
+              className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              required
+              min="0"
+            />
+            <input
+              type="number"
               placeholder="Stok"
               value={formData.stock}
               onChange={e => setFormData({ ...formData, stock: e.target.value })}
@@ -241,6 +255,7 @@ const Books: React.FC = () => {
                 onClick={() => {
                   setFormData({
                     name: '',
+                    publicationYear: '',
                     authorId: '',
                     publisherId: '',
                     categoryId: '',
