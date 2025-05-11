@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { Book, Author, Publisher, Category, Borrow } from '../types';
 
-const API_BASE = 'https://vocational-vivyan-frivoller-6b62a16b.koyeb.app/api/v1';
+const API_BASE = 'https://advisory-slug-frivoller-95937079.koyeb.app/api/v1';
 
 export const bookService = {
   getAll: () => axios.get<Book[]>(`${API_BASE}/books`),
