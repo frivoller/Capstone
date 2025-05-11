@@ -5,7 +5,6 @@ Bu proje, bir kütüphane yönetim sisteminin frontend uygulamasıdır. React, T
 ## ✨ Özellikler
 
 - 📖 Kitap, yazar, yayınevi, kategori ve ödünç alma işlemleri için tam CRUD operasyonları
-- 🔄 Offline çalışma desteği
 - 🚀 API tekrar çalıştığında otomatik senkronizasyon
 - 🎨 Modern ve kullanıcı dostu arayüz
 
