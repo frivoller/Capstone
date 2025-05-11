@@ -28,11 +28,17 @@ export interface Book {
   categories?: Category[];
 }
 
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string;
+}
+
 export interface Borrow {
   id: number;
-  borrowerName: string;
-  borrowerMail: string;
+  book: Book;
+  user: User;
   borrowingDate: string;
   returnDate: string | null;
-  book: Book;
 } 

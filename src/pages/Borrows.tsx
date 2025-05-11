@@ -43,6 +43,11 @@ const Borrows: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      if (!formData.bookId || !formData.userId || !formData.borrowDate) {
+        toast.error('Lütfen gerekli alanları doldurun');
+        return;
+      }
+
       const borrowData = {
         bookId: parseInt(formData.bookId),
         userId: parseInt(formData.userId),
@@ -65,8 +70,9 @@ const Borrows: React.FC = () => {
       });
       setEditingId(null);
       loadData();
-    } catch (error) {
-      toast.error('İşlem sırasında bir hata oluştu');
+    } catch (error: any) {
+      console.error('Form submission error:', error);
+      toast.error(error.response?.data?.message || 'İşlem sırasında bir hata oluştu');
     }
   };
 
@@ -179,6 +185,8 @@ const Borrows: React.FC = () => {
           <h2 className="text-xl font-semibold mb-4">{editingId ? 'Ödünç Kaydı Düzenle' : 'Yeni Ödünç Kaydı'}</h2>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <select
+              id="bookId"
+              name="bookId"
               value={formData.bookId}
               onChange={e => setFormData({ ...formData, bookId: e.target.value })}
               className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -190,25 +198,34 @@ const Borrows: React.FC = () => {
               ))}
             </select>
             <input
-              type="text"
+              type="number"
+              id="userId"
+              name="userId"
               placeholder="Kullanıcı ID"
               value={formData.userId}
               onChange={e => setFormData({ ...formData, userId: e.target.value })}
               className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
               required
+              min="1"
             />
             <input
               type="date"
+              id="borrowDate"
+              name="borrowDate"
               value={formData.borrowDate}
               onChange={e => setFormData({ ...formData, borrowDate: e.target.value })}
               className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
               required
+              max={new Date().toISOString().split('T')[0]}
             />
             <input
               type="date"
+              id="returnDate"
+              name="returnDate"
               value={formData.returnDate}
               onChange={e => setFormData({ ...formData, returnDate: e.target.value })}
               className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              min={formData.borrowDate}
             />
             <div className="col-span-full flex justify-end gap-2">
               <button

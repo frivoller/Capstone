@@ -32,18 +32,28 @@ const Authors: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      if (!formData.name.trim()) {
+        toast.error('Yazar adı boş olamaz');
+        return;
+      }
+
+      const authorData = {
+        name: formData.name.trim()
+      };
+
       if (editingId) {
-        await authorService.update(editingId, formData);
+        await authorService.update(editingId, authorData);
         toast.success('Yazar başarıyla güncellendi');
       } else {
-        await authorService.create(formData);
+        await authorService.create(authorData);
         toast.success('Yazar başarıyla eklendi');
       }
       setFormData({ name: '' });
       setEditingId(null);
       loadData();
-    } catch (error) {
-      toast.error('İşlem sırasında bir hata oluştu');
+    } catch (error: any) {
+      console.error('Form submission error:', error);
+      toast.error(error.response?.data?.message || 'İşlem sırasında bir hata oluştu');
     }
   };
 
@@ -110,11 +120,15 @@ const Authors: React.FC = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <input
               type="text"
+              id="authorName"
+              name="authorName"
               placeholder="Yazar Adı"
               value={formData.name}
               onChange={e => setFormData({ ...formData, name: e.target.value })}
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
               required
+              minLength={2}
+              maxLength={100}
             />
             <div className="flex justify-end gap-2">
               <button

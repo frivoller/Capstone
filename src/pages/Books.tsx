@@ -52,8 +52,14 @@ const Books: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      if (!formData.name || !formData.publicationYear || !formData.stock || 
+          !formData.authorId || !formData.publisherId || !formData.categoryId) {
+        toast.error('Lütfen tüm alanları doldurun');
+        return;
+      }
+
       const bookData = {
-        name: formData.name,
+        name: formData.name.trim(),
         publicationYear: parseInt(formData.publicationYear),
         stock: parseInt(formData.stock),
         author: { id: parseInt(formData.authorId) },
@@ -68,6 +74,7 @@ const Books: React.FC = () => {
         await bookService.create(bookData);
         toast.success('Kitap başarıyla eklendi');
       }
+      
       setFormData({
         name: '',
         publicationYear: '',
@@ -78,8 +85,9 @@ const Books: React.FC = () => {
       });
       setEditingId(null);
       loadData();
-    } catch (error) {
-      toast.error('İşlem sırasında bir hata oluştu');
+    } catch (error: any) {
+      console.error('Form submission error:', error);
+      toast.error(error.response?.data?.message || 'İşlem sırasında bir hata oluştu');
     }
   };
 
@@ -198,6 +206,8 @@ const Books: React.FC = () => {
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <input
               type="text"
+              id="bookName"
+              name="bookName"
               placeholder="Kitap Adı"
               value={formData.name}
               onChange={e => setFormData({ ...formData, name: e.target.value })}
@@ -206,15 +216,20 @@ const Books: React.FC = () => {
             />
             <input
               type="number"
+              id="publicationYear"
+              name="publicationYear"
               placeholder="Yayın Yılı"
               value={formData.publicationYear}
               onChange={e => setFormData({ ...formData, publicationYear: e.target.value })}
               className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
               required
-              min="0"
+              min="1000"
+              max={new Date().getFullYear()}
             />
             <input
               type="number"
+              id="stock"
+              name="stock"
               placeholder="Stok"
               value={formData.stock}
               onChange={e => setFormData({ ...formData, stock: e.target.value })}
@@ -223,6 +238,8 @@ const Books: React.FC = () => {
               min="0"
             />
             <select
+              id="authorId"
+              name="authorId"
               value={formData.authorId}
               onChange={e => setFormData({ ...formData, authorId: e.target.value })}
               className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -232,6 +249,8 @@ const Books: React.FC = () => {
               {authors.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
             </select>
             <select
+              id="publisherId"
+              name="publisherId"
               value={formData.publisherId}
               onChange={e => setFormData({ ...formData, publisherId: e.target.value })}
               className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
@@ -241,6 +260,8 @@ const Books: React.FC = () => {
               {publishers.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
             </select>
             <select
+              id="categoryId"
+              name="categoryId"
               value={formData.categoryId}
               onChange={e => setFormData({ ...formData, categoryId: e.target.value })}
               className="px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"

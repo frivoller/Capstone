@@ -32,18 +32,28 @@ const Publishers: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      if (!formData.name.trim()) {
+        toast.error('Yayınevi adı boş olamaz');
+        return;
+      }
+
+      const publisherData = {
+        name: formData.name.trim()
+      };
+
       if (editingId) {
-        await publisherService.update(editingId, formData);
+        await publisherService.update(editingId, publisherData);
         toast.success('Yayınevi başarıyla güncellendi');
       } else {
-        await publisherService.create(formData);
+        await publisherService.create(publisherData);
         toast.success('Yayınevi başarıyla eklendi');
       }
       setFormData({ name: '' });
       setEditingId(null);
       loadData();
-    } catch (error) {
-      toast.error('İşlem sırasında bir hata oluştu');
+    } catch (error: any) {
+      console.error('Form submission error:', error);
+      toast.error(error.response?.data?.message || 'İşlem sırasında bir hata oluştu');
     }
   };
 
@@ -110,11 +120,15 @@ const Publishers: React.FC = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             <input
               type="text"
+              id="publisherName"
+              name="publisherName"
               placeholder="Yayınevi Adı"
               value={formData.name}
               onChange={e => setFormData({ ...formData, name: e.target.value })}
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
               required
+              minLength={2}
+              maxLength={100}
             />
             <div className="flex justify-end gap-2">
               <button
